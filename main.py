@@ -40,6 +40,9 @@ def is_allowed_target(target_url, start_urls):
 
 
 def rewrite_internal_links(filepath, base_url):
+    def is_local_reference(href):
+        return not href.startswith("http://") and not href.startswith("https://") and not href.startswith("/")
+
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             soup = BeautifulSoup(f, "html.parser")
@@ -49,7 +52,13 @@ def rewrite_internal_links(filepath, base_url):
 
     for tag in soup.find_all("a", href=True):
         original_href = tag["href"]
+
+        # Skip links that already look like local files
+        if is_local_reference(original_href):
+            continue
+
         full_url = urljoin(base_url, original_href)
+
         if is_exact_subdomain_match(base_url, full_url):
             tag["href"] = sanitize_filename(full_url)
 
@@ -160,7 +169,7 @@ def main():
 
     output_dir = "output"
     os.makedirs(output_dir, exist_ok=True)
-    
+
     for url in start_urls:
         print(f"START: Crawling from: {url}")
         fetch_and_save(url, output_dir, start_urls)
